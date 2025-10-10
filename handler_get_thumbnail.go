@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/google/uuid"
 )
-
+const maxMemory =10<<20
 func (cfg *apiConfig) handlerThumbnailGet(w http.ResponseWriter, r *http.Request) {
 	videoIDString := r.PathValue("videoID")
 	videoID, err := uuid.Parse(videoIDString)
@@ -14,7 +15,16 @@ func (cfg *apiConfig) handlerThumbnailGet(w http.ResponseWriter, r *http.Request
 		respondWithError(w, http.StatusBadRequest, "Invalid video ID", err)
 		return
 	}
+	err= r.ParseMultipartForm(maxMemory)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Parsing Failed", err)
+		return
+	}
+	multiPartFile, multipPartHeader,err:= r.FormFile("thumbnail")
+	contentType:=multipPartHeader.Header["Content-Type"]
 
+	var data []byte
+	data,err = io.ReadAll(multiPartFile)
 	tn, ok := videoThumbnails[videoID]
 	if !ok {
 		respondWithError(w, http.StatusNotFound, "Thumbnail not found", nil)
