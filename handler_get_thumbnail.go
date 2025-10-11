@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
 )
 const maxMemory =10<<20
@@ -21,10 +22,34 @@ func (cfg *apiConfig) handlerThumbnailGet(w http.ResponseWriter, r *http.Request
 		return
 	}
 	multiPartFile, multipPartHeader,err:= r.FormFile("thumbnail")
-	contentType:=multipPartHeader.Header["Content-Type"]
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn'tcreate a multipart form", err)
+		return
+	}
+	mediaType:=multipPartHeader.Header["Content-Type"]
 
-	var data []byte
-	data,err = io.ReadAll(multiPartFile)
+	// var data []byte
+	data, err:= io.ReadAll(multiPartFile)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't parse data", err)
+		return
+	}
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't find JWT", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't validate JWT", err)
+		return
+	}
+	cfg.db.GetVideo(userID)
+	var thumbnail thumbnail
+	thumbnail.data=data
+	thumbnail.mediaType=mediaType[0]
+	videoThumbnails[videoID]= thumbnail
 	tn, ok := videoThumbnails[videoID]
 	if !ok {
 		respondWithError(w, http.StatusNotFound, "Thumbnail not found", nil)
