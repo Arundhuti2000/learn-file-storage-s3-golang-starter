@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
@@ -27,11 +28,43 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusUnauthorized, "Couldn't validate JWT", err)
 		return
 	}
-
-
 	fmt.Println("uploading thumbnail for video", videoID, "by user", userID)
+	const maxMemory = 10>>20
+	err= r.ParseMultipartForm(maxMemory)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Parsing Failed", err)
+		return
+	}
+	multiPartFile, multipPartHeader,err:= r.FormFile("thumbnail")
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn'tcreate a multipart form", err)
+		return
+	}
+	mediaType:=multipPartHeader.Header["Content-Type"]
 
-	// TODO: implement the upload here
+	// var data []byte
+	data, err:= io.ReadAll(multiPartFile)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't parse data", err)
+		return
+	}
+	
+	metaData,err:=cfg.db.GetVideo(videoID)
+	if metaData.UserID!=userID{
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized User ", err)
+	}
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Couldn't fetch video", err)
+		return
+	}
+	var thumbnail thumbnail
+	thumbnail.data=data
+	thumbnail.mediaType=mediaType[0]
+	videoThumbnails[videoID]= thumbnail
 
-	respondWithJSON(w, http.StatusOK, struct{}{})
+	thumbnail_url:="http://localhost:8091/api/thumbnails/{videoID}"
+	metaData.ThumbnailURL=&thumbnail_url
+	cfg.db.UpdateVideo(metaData)
+	// respondWithJSON(w,r.Response.StatusCode,metaData)
+	respondWithJSON(w, http.StatusOK, metaData)
 }
