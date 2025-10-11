@@ -35,13 +35,19 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusBadRequest, "Parsing Failed", err)
 		return
 	}
+	
 	multiPartFile, multipPartHeader,err:= r.FormFile("thumbnail")
+	
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Couldn'tcreate a multipart form", err)
 		return
 	}
-	mediaType:=multipPartHeader.Header["Content-Type"]
-
+	defer multiPartFile.Close()
+	mediaType:=multipPartHeader.Header.Get("Content-Type")
+	if mediaType == "" {
+		respondWithError(w, http.StatusBadRequest, "Missing Content-Type for thumbnail", nil)
+		return
+	}
 	// var data []byte
 	data, err:= io.ReadAll(multiPartFile)
 	if err != nil {
@@ -59,12 +65,16 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 	var thumbnail thumbnail
 	thumbnail.data=data
-	thumbnail.mediaType=mediaType[0]
+	thumbnail.mediaType=mediaType
 	videoThumbnails[videoID]= thumbnail
-
-	thumbnail_url:="http://localhost:8091/api/thumbnails/{videoID}"
+	thumbnail_url:= fmt.Sprintf("http://localhost:%s/api/thumbnails/%s", cfg.port, videoID)
 	metaData.ThumbnailURL=&thumbnail_url
-	cfg.db.UpdateVideo(metaData)
+	err=cfg.db.UpdateVideo(metaData)
+	if err != nil {
+		delete(videoThumbnails, videoID)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't update video", err)
+		return
+	}
 	// respondWithJSON(w,r.Response.StatusCode,metaData)
 	respondWithJSON(w, http.StatusOK, metaData)
 }
