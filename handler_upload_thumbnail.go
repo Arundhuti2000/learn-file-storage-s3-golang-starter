@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 
@@ -44,15 +45,32 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	defer multiPartFile.Close()
-	mediaType:=multipPartHeader.Header.Get("Content-Type")
-	if mediaType == "" {
-		respondWithError(w, http.StatusBadRequest, "Missing Content-Type for thumbnail", nil)
+	mediaType, _, err := mime.ParseMediaType(multipPartHeader.Header.Get("Content-Type"))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid Content-Type", err)
+		return
+	}
+	if mediaType != "image/jpeg" && mediaType != "image/png" {
+		respondWithError(w, http.StatusBadRequest, "Invalid file type", nil)
 		return
 	}
 	// var data []byte
-	data, err:= io.ReadAll(multiPartFile)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Couldn't parse data", err)
+	// data, err:= io.ReadAll(multiPartFile)
+	// if err != nil {
+	// 	respondWithError(w, http.StatusUnauthorized, "Couldn't parse data", err)
+	// 	return
+	// }
+	assetPath:= cfg.getAssetsPath(videoID,mediaType)
+	assetDiskPath:=cfg.getAssetsDiskPath(assetPath)
+	fmt.Println("Saving thumbnail to:", assetDiskPath)
+	dst, err:=os.Create(assetDiskPath)
+	if err!=nil{
+		respondWithError(w, http.StatusInternalServerError,"Unable to create file on server",err)
+		return
+	}
+	defer dst.Close()
+	if _,err= io.Copy(dst,multiPartFile);err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error saving file", err)
 		return
 	}
 	
@@ -66,21 +84,10 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 	// encodedimageData:=base64.StdEncoding.EncodeToString(data)
 	
-	assetPath:= cfg.getAssetsPath(videoID,mediaType)
-	assetDiskPath:=cfg.getAssetsDiskPath(assetPath)
-	dst, err:=os.Create(assetDiskPath)
-	if err!=nil{
-		respondWithError(w, http.StatusInternalServerError,"Unable to create file on server",err)
-		return
-	}
-	defer dst.Close()
-	if _,err= io.Copy(dst,multiPartFile);err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Error saving file", err)
-		return
-	}
-	var thumbnail thumbnail
-	thumbnail.data=data
-	thumbnail.mediaType=mediaType
+	
+	// var thumbnail thumbnail
+	// thumbnail.data=data
+	// thumbnail.mediaType=mediaType
 	// videoThumbnails[videoID]= thumbnail
 	// thumbnail_url:= fmt.Sprintf("http://localhost:%s/api/thumbnails/%s", cfg.port, videoID)
 	// thumbnail_url:= fmt.Sprintf("data:%s;base64,%v", mediaType,encodedimageData)
