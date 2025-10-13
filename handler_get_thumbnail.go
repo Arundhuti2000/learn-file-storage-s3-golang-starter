@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -14,17 +13,17 @@ func (cfg *apiConfig) handlerThumbnailGet(w http.ResponseWriter, r *http.Request
 		respondWithError(w, http.StatusBadRequest, "Invalid video ID", err)
 		return
 	}
-
-	tn, ok := videoThumbnails[videoID]
-	if !ok {
+	data,ok:=cfg.db.GetVideo(videoID)
+	// tn, ok := videoThumbnails[videoID]
+	if ok!=nil {
 		respondWithError(w, http.StatusNotFound, "Thumbnail not found", nil)
 		return
 	}
+	
+	// w.Header().Set("Content-Type", tn.mediaType)
+	// w.Header().Set("Content-Length", fmt.Sprintf("%d", len(tn.data)))
 
-	w.Header().Set("Content-Type", tn.mediaType)
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(tn.data)))
-
-	_, err = w.Write(tn.data)
+	_, err = w.Write([]byte(*data.ThumbnailURL))
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error writing response", err)
 		return
