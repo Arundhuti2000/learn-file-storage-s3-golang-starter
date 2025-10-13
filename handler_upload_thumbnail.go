@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -56,28 +56,42 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	
-	metaData,err:=cfg.db.GetVideo(videoID)
-	if metaData.UserID!=userID{
+	video,err:=cfg.db.GetVideo(videoID)
+	if video.UserID!=userID{
 		respondWithError(w, http.StatusUnauthorized, "Unauthorized User ", err)
 	}
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Couldn't fetch video", err)
 		return
 	}
-	encodedimageData:=base64.StdEncoding.EncodeToString(data)
+	// encodedimageData:=base64.StdEncoding.EncodeToString(data)
+	
+	assetPath:= cfg.getAssetsPath(videoID,mediaType)
+	assetDiskPath:=cfg.getAssetsDiskPath(assetPath)
+	dst, err:=os.Create(assetDiskPath)
+	if err!=nil{
+		respondWithError(w, http.StatusInternalServerError,"Unable to create file on server",err)
+		return
+	}
+	defer dst.Close()
+	if _,err= io.Copy(dst,multiPartFile);err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error saving file", err)
+		return
+	}
 	var thumbnail thumbnail
 	thumbnail.data=data
 	thumbnail.mediaType=mediaType
 	// videoThumbnails[videoID]= thumbnail
 	// thumbnail_url:= fmt.Sprintf("http://localhost:%s/api/thumbnails/%s", cfg.port, videoID)
-	thumbnail_url:= fmt.Sprintf("data:%s;base64,%v", mediaType,encodedimageData)
-	metaData.ThumbnailURL=&thumbnail_url
-	err=cfg.db.UpdateVideo(metaData)
+	// thumbnail_url:= fmt.Sprintf("data:%s;base64,%v", mediaType,encodedimageData)
+	thumbnail_url:= cfg.getAssetsURL(assetPath)
+	video.ThumbnailURL=&thumbnail_url
+	err=cfg.db.UpdateVideo(video)
 	if err != nil {
 		// delete(videoThumbnails, videoID)
 		respondWithError(w, http.StatusInternalServerError, "Couldn't update video", err)
 		return
 	}
-	// respondWithJSON(w,r.Response.StatusCode,metaData)
-	respondWithJSON(w, http.StatusOK, metaData)
+	// respondWithJSON(w,r.Response.StatusCode,video)
+	respondWithJSON(w, http.StatusOK, video)
 }
