@@ -4,3 +4,5 @@ out
 assets/
 samples/
 data.csv
+aws/
+awscliv2.zip
