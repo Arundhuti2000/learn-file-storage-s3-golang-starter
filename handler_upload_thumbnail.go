@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"mime"
@@ -60,7 +62,11 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	// 	respondWithError(w, http.StatusUnauthorized, "Couldn't parse data", err)
 	// 	return
 	// }
-	assetPath:= cfg.getAssetsPath(videoID,mediaType)
+	key := make([]byte, 32)
+	rand.Read(key)
+	encodedKey := base64.RawURLEncoding.EncodeToString(key)
+	// assetPath:= cfg.getAssetsPath(videoID,mediaType)
+	assetPath:= cfg.getAssetsPath(encodedKey,mediaType)
 	assetDiskPath:=cfg.getAssetsDiskPath(assetPath)
 	fmt.Println("Saving thumbnail to:", assetDiskPath)
 	dst, err:=os.Create(assetDiskPath)
