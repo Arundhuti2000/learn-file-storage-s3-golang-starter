@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/database"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -95,7 +98,9 @@ func main() {
 		s3CfDistribution: s3CfDistribution,
 		port:             port,
 	}
-
+	awscfg,err:= config.LoadDefaultConfig(context.TODO(), config.WithRegion(s3Region) )
+	client:=s3.NewFromConfig(awscfg)
+	cfg.s3Client = client
 	err = cfg.ensureAssetsDir()
 	if err != nil {
 		log.Fatalf("Couldn't create assets directory: %v", err)
