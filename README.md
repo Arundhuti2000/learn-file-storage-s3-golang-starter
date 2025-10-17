@@ -6,7 +6,7 @@ This repo contains the starter code for the Tubely application - the #1 tool for
 
 *This is to be used as a *reference\* in case you need it, you should follow the instructions in the course rather than trying to do everything here.
 
-## 1. Install dependencies
+## 1. Install dependencies...
 
 - [Go](https://golang.org/doc/install)
 - `go mod download` to download all dependencies
