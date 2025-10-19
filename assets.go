@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,4 +31,25 @@ func (cfg apiConfig) getAssetsDiskPath(assetPath string)string{
 }
 func (cfg apiConfig) getAssetsURL(assetPath string) string{
 	return  fmt.Sprintf("http://localhost:%s/assets/%s", cfg.port, assetPath)
+}
+func (cfg apiConfig) getObjectURL(key string) string {
+	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, key)
+}
+func getAssetPath(mediaType string) string {
+	base := make([]byte, 32)
+	_, err := rand.Read(base)
+	if err != nil {
+		panic("failed to generate random bytes")
+	}
+	id := base64.RawURLEncoding.EncodeToString(base)
+
+	ext := mediaTypeToExt(mediaType)
+	return fmt.Sprintf("%s%s", id, ext)
+}
+func mediaTypeToExt(mediaType string) string {
+	parts := strings.Split(mediaType, "/")
+	if len(parts) != 2 {
+		return ".bin"
+	}
+	return "." + parts[1]
 }
