@@ -165,3 +165,9 @@ func getVideoAspectRatio(filePath string) (string, error) {
 	}
 	return "other", nil
 }
+
+func processVideoForFastStart(filePath string) (string, error){
+	var outputFilePath string
+	
+
+}
