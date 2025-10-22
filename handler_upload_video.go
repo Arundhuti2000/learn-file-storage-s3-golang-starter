@@ -74,21 +74,23 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	defer os.Remove(tempFile.Name())
-	defer tempFile.Close()
+	
 
 	if _, err := io.Copy(tempFile, file); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Could not write file to disk", err)
 		return
 	}
-
-	_, err = tempFile.Seek(0, io.SeekStart)
+	defer tempFile.Close()
+	processedVideo,err:=processVideoForFastStart(tempFile.Name())
+	// _, err = tempFile.Seek(0, io.SeekStart)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Could not reset file pointer", err)
+		respondWithError(w, http.StatusInternalServerError, "Could not process file", err)
 		return
 	}
+	// Pvideo,err:=io.Reader(processedVideo)
 
 	directory := ""
-	aspectRatio, err := getVideoAspectRatio(tempFile.Name())
+	aspectRatio, err := getVideoAspectRatio(processedVideo)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error determining aspect ratio", err)
 		return
@@ -101,20 +103,28 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	default:
 		directory = "other"
 	}
-
+	processedVideofromFile, err := os.Open(processedVideo)
+	
+	// pVideo,err:=processedvideoreader.Read([]byte(processedVideo))
+	if err!=nil{
+		respondWithError(w, http.StatusInternalServerError, "Failed to read processed video", err)
+		return
+	}
+	defer processedVideofromFile.Close()
 	key := getAssetPath(mediaType)
 	key = path.Join(directory, key)
 	_, err = cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
 		Bucket:      aws.String(cfg.s3Bucket),
 		Key:         aws.String(key),
-		Body:        tempFile,
+		Body:        processedVideofromFile,
 		ContentType: aws.String(mediaType),
 	})
+	
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error uploading file to S3", err)
 		return
 	}
-
+	os.Remove(processedVideo)
 	url := cfg.getObjectURL(key)
 	video.VideoURL = &url
 	err = cfg.db.UpdateVideo(video)
@@ -167,7 +177,12 @@ func getVideoAspectRatio(filePath string) (string, error) {
 }
 
 func processVideoForFastStart(filePath string) (string, error){
-	var outputFilePath string = 
-	
+	outputFilePath:= filePath + ".processing"
+	cmd:= exec.Command("ffmpeg", "-i",filePath, "-c","copy","-movflags", "faststart", "-f", "mp4", outputFilePath)
+	err := cmd.Run()
+	if err!=nil{
+		return "", err
+	}
 
+	return outputFilePath, nil
 }
