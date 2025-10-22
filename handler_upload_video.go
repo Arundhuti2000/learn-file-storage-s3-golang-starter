@@ -167,7 +167,7 @@ func getVideoAspectRatio(filePath string) (string, error) {
 }
 
 func processVideoForFastStart(filePath string) (string, error){
-	var outputFilePath string
+	var outputFilePath string = 
 	
 
 }
