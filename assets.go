@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -45,13 +46,11 @@ func (cfg apiConfig) getPresignedObjectURL(key string) string {
 func (cfg apiConfig) generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error) {
 	presignClient := s3.NewPresignClient(s3Client)
 	resp, err := presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	}, func(po *s3.PresignOptions) {
-		po.Expires = expireTime
-	})
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(expireTime))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate presigned URL: %v", err)
 	}
 	return resp.URL, nil
 }
