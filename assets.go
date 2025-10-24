@@ -1,17 +1,12 @@
 package main
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 func (cfg apiConfig) ensureAssetsDir() error {
@@ -40,20 +35,20 @@ func (cfg apiConfig) getAssetsURL(assetPath string) string{
 func (cfg apiConfig) getObjectURL(key string) string {
 	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, key)
 }
-func (cfg apiConfig) getPresignedObjectURL(key string) string {
-	return fmt.Sprintf("%s,%s", cfg.s3Bucket, key)
-}
-func (cfg apiConfig) generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error) {
-	presignClient := s3.NewPresignClient(s3Client)
-	resp, err := presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	}, s3.WithPresignExpires(expireTime))
-	if err != nil {
-		return "", fmt.Errorf("failed to generate presigned URL: %v", err)
-	}
-	return resp.URL, nil
-}
+// func (cfg apiConfig) getPresignedObjectURL(key string) string {
+// 	return fmt.Sprintf("%s,%s", cfg.s3Bucket, key)
+// }
+// func (cfg apiConfig) generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error) {
+// 	presignClient := s3.NewPresignClient(s3Client)
+// 	resp, err := presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
+// 		Bucket: aws.String(bucket),
+// 		Key:    aws.String(key),
+// 	}, s3.WithPresignExpires(expireTime))
+// 	if err != nil {
+// 		return "", fmt.Errorf("failed to generate presigned URL: %v", err)
+// 	}
+// 	return resp.URL, nil
+// }
 func getAssetPath(mediaType string) string {
 	base := make([]byte, 32)
 	_, err := rand.Read(base)
