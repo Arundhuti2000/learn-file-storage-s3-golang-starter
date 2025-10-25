@@ -35,6 +35,9 @@ func (cfg apiConfig) getAssetsURL(assetPath string) string{
 func (cfg apiConfig) getObjectURL(key string) string {
 	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, key)
 }
+func (cfg apiConfig) gets3cfDistroURL(s3CfDistribution, s3ObjectKey string) string {
+	return fmt.Sprintf("%s/%s", s3CfDistribution,s3ObjectKey)
+}
 // func (cfg apiConfig) getPresignedObjectURL(key string) string {
 // 	return fmt.Sprintf("%s,%s", cfg.s3Bucket, key)
 // }

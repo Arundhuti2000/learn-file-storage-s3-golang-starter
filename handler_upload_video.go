@@ -127,9 +127,10 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	os.Remove(processedVideo)
-	url := cfg.getObjectURL(key)
+	// url := cfg.getObjectURL(key)
 	// video.VideoURL = &url
 	// url:= cfg.getPresignedObjectURL(key)
+	url:= cfg.gets3cfDistroURL(cfg.s3CfDistribution,key)
 	video.VideoURL = &url
 	
 	err = cfg.db.UpdateVideo(video)
